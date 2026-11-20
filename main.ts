@@ -1,5 +1,6 @@
 // Friday, 20 November 2026 world-news front page.
 // Copy the finished, locally rendered editorial image; no network or third-party packages are used.
+// The deterministic artwork is kept beside this entrypoint for exact repeatable copies.
 //
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts

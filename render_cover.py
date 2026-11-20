@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import math
 import random
 
@@ -25,13 +25,15 @@ def line(points, fill, width=1):
     d.line(points, fill=fill, width=width, joint="curve")
 
 
-def panel(box, fill="#0d1d2b", outline="#284050", radius=14):
+def panel(box, fill="#0d1d2b", outline="#284050", radius=6):
     d.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=1)
 
 
-def paint_translucent(draw_scene):
+def paint_translucent(draw_scene, blur=0):
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw_scene(ImageDraw.Draw(layer, "RGBA"))
+    if blur:
+        layer = layer.filter(ImageFilter.GaussianBlur(blur))
     im.paste(Image.alpha_composite(im.convert("RGBA"), layer).convert("RGB"))
 
 
@@ -56,10 +58,10 @@ text(793, 26, "FRIDAY  ·  20 NOVEMBER 2026", 14, "#dce6e8", FONT_SANS)
 line([(24, 57), (1000, 57)], "#344956", 1)
 text(24, 66, "FRIDAY,", 38, "#f3f5f2", FONT_SERIF)
 text(24, 105, "20 NOVEMBER 2026", 43, "#f3f5f2", FONT_SERIF)
-text(749, 116, "THE DAY IN FOCUS", 13, "#9fb4bd", FONT_SANS)
+text(749, 114, "THE DAY IN FOCUS", 15, "#e1e9e9", FONT_SANS)
 
 # Hero landscape — a painted monsoon coast with a broad storm eye and shelter lights.
-hy, hh = 162, 366
+hy, hh = 162, 326
 for y in range(hy, hy + hh):
     t = (y - hy) / hh
     c1 = (17, 47, 66)
@@ -67,41 +69,40 @@ for y in range(hy, hy + hh):
     c = tuple(round(a * (1 - t) + b * t) for a, b in zip(c1, c2))
     d.line((0, y, W, y), fill=c)
 
-# Layered cloud banks and a visible, spiral-shaped storm structure.
+# An irregular, low-contrast cyclone mass: broken cloud lobes rather than graphic rings.
 def draw_clouds(layer):
-    for i in range(22):
-        x0 = random.randint(150, 810)
-        y0 = random.randint(190, 310)
-        length = random.randint(150, 360)
-        phase = random.random() * math.tau
-        amplitude = random.randint(7, 18)
-        pts = [(x0+j, y0 + math.sin(j/53 + phase)*amplitude)
-               for j in range(0, length, 8)]
-        shade = random.choice([(126,161,171,29),(74,120,139,37),(37,84,105,42)])
-        layer.line(pts, fill=shade, width=random.randint(12, 31), joint="curve")
-    for i in range(9):
-        x0 = 470 + i * 45
-        y0 = 255 + (i % 4) * 17
-        pts = [(x0+j, y0 + math.sin(j/62+i*.41)*18)
-               for j in range(0, 265, 8)]
-        layer.line(pts, fill=(5,25,38,95), width=23, joint="curve")
-paint_translucent(draw_clouds)
-cx, cy = 764, 302
-for phase, color, width in [(0, "#82abb2", 7), (1.7, "#d0d5c7", 5), (3.2, "#5e929f", 4)]:
-    spiral = []
-    for step in range(230):
-        t = step / 229
-        angle = -2.3 + t * math.tau * 1.72 + phase
-        radius = 27 + t * 155
-        spiral.append((cx + math.cos(angle)*radius,
-                       cy + math.sin(angle)*radius*.56))
-    line(spiral, color, width)
-d.ellipse((cx-43, cy-25, cx+43, cy+25), fill=(9, 30, 43, 210))
-d.ellipse((cx-18, cy-10, cx+18, cy+10), fill=(151, 185, 185, 125))
+    lobes = [
+        (681, 222, 164, 52, 48), (762, 254, 121, 57, 55),
+        (850, 213, 125, 43, 42), (901, 282, 106, 49, 39),
+        (778, 331, 175, 36, 34), (626, 282, 94, 40, 31),
+        (934, 346, 88, 31, 25), (713, 197, 81, 26, 22),
+        (842, 301, 79, 29, 22),
+    ]
+    for i, (x, y, rx, ry, alpha) in enumerate(lobes):
+        x += random.randint(-27, 24)
+        y += random.randint(-15, 18)
+        layer.ellipse((x-rx, y-ry, x+rx, y+ry),
+                      fill=(91, 128, 145, alpha + (i % 3) * 5))
+    for i in range(34):
+        x = random.randint(625, 948)
+        y = random.randint(199, 354)
+        rx = random.randint(12, 72)
+        ry = random.randint(7, 24)
+        layer.ellipse((x-rx, y-ry, x+rx, y+ry),
+                      fill=random.choice([(97,137,150,15),(49,91,108,25),(24,63,80,34)]))
+    for points, width, shade in [
+        ([(644,267),(665,243),(693,229),(721,225),(745,233),(763,250),(775,270)], 19, (35,75,91,91)),
+        ([(787,324),(813,332),(837,327),(855,311)], 13, (48,87,101,74)),
+    ]:
+        layer.line(points, fill=shade, width=width, joint="curve")
+paint_translucent(draw_clouds, blur=4)
+cx, cy = 787, 281
+d.ellipse((cx-22, cy-13, cx+22, cy+13), fill="#102c3b")
+d.ellipse((cx-8, cy-5, cx+8, cy+5), fill="#506d77")
 
 # Rain veils.
 def draw_rain(layer):
-    for i in range(250):
+    for i in range(170):
         x = random.randint(0, W)
         y = random.randint(hy+20, hy+300)
         layer.line([(x, y), (x-9, y+22)],
@@ -110,21 +111,21 @@ paint_translucent(draw_rain)
 
 # Sea bands, foam, and wave crests.
 d.polygon([(0, 408), (180, 388), (370, 419), (555, 396), (735, 419), (1024, 388),
-           (1024, 528), (0, 528)], fill="#092b3c")
-for row in range(18):
-    y = 418 + row * 7
-    for j in range(9):
-        x = j * 132 + (row % 2) * 42 + random.randint(-14, 14)
+           (1024, 488), (0, 488)], fill="#092b3c")
+for row in range(7):
+    y = 418 + row * 9
+    for j in range(4):
+        x = j * 260 + (row % 2) * 36 + random.randint(-14, 14)
         length = random.randint(24, 74)
         line([(x, y), (x+length, y-random.randint(0, 4))],
              (113, 174, 181, random.randint(28, 104)), random.choice([1, 1, 2]))
 
 # Ganjam shore, rain-dark palms and a low-lit shelter.
-d.polygon([(465, 528), (510, 496), (544, 475), (562, 452), (613, 454),
-           (680, 445), (758, 458), (837, 444), (918, 451), (1024, 438), (1024, 528)],
+d.polygon([(465, 488), (510, 476), (544, 465), (562, 452), (613, 454),
+           (680, 445), (758, 458), (837, 444), (918, 451), (1024, 438), (1024, 488)],
           fill="#182f31")
-d.polygon([(506, 509), (554, 481), (587, 466), (651, 466), (712, 462),
-           (781, 471), (855, 461), (942, 466), (1024, 462), (1024, 528), (477, 528)],
+d.polygon([(506, 485), (554, 474), (587, 466), (651, 466), (712, 462),
+           (781, 471), (855, 461), (942, 466), (1024, 462), (1024, 488), (477, 488)],
           fill="#26372e")
 for x in [600, 674, 913, 976]:
     # Leaning trunks and wind-flattened palm fronds.
@@ -140,7 +141,7 @@ d.polygon([(810, 442), (890, 408), (968, 442)], fill="#0b171c")
 d.rectangle((854, 445, 869, 473), fill="#d79a5a")
 d.rectangle((896, 447, 911, 461), fill="#dfb678")
 for x in range(811, 1000, 23):
-    line([(x, 487), (x+33, 484)], (214, 198, 155, 80), 1)
+    line([(x, 480), (x+33, 477)], (214, 198, 155, 80), 1)
 
 # Smooth dark fade under the headline keeps the illustration visible and the type crisp.
 blend_left_fade(hy, hy+hh, 630, (5, 18, 28))
@@ -153,110 +154,103 @@ line([(25, 355), (380, 355)], "#a3bbc0", 1)
 text(25, 369, "70–80 km/h", 23, "#ffffff", FONT_SANS)
 text(195, 375, "gusts to 90 km/h", 17, "#d3dfe1", FONT_REG)
 text(25, 407, "372,000 moved to 10,000 shelters", 17, "#dce8e7", FONT_SANS)
-text(25, 489, "IMD: landfall 7:30–8:30 a.m. IST  •  Patrapur rain: 209 mm", 14, "#c8d7d9", FONT_REG)
+text(25, 467, "IMD: landfall 7:30–8:30 a.m. IST  •  Patrapur rain: 209 mm", 14, "#c8d7d9", FONT_REG)
 
-# Two independent, cinematic lead panels.
-panel((20, 540, 504, 768), "#0b1725")
-panel((520, 540, 1004, 768), "#111722")
+# Expanded, squared editorial lead panels for Kyiv and the Asian close.
+panel((20, 498, 504, 752), "#0b1725")
+panel((520, 498, 1004, 752), "#111722")
 
 # Kyiv: river, damaged bridge, skyline, fire glow and emergency lamps.
-for y in range(548, 760):
-    t=(y-548)/212
+for y in range(506, 744):
+    t=(y-506)/238
     col=(14, 29, 49)
     d.line((28,y,496,y), fill=tuple(int(c*(1-t*.27)) for c in col))
-d.ellipse((300, 584, 494, 727), fill=(217, 91, 56, 30))
-# distant building silhouettes
-for bx, bw, top in [(285,38,601),(326,48,578),(377,35,612),(417,52,593),(463,28,622)]:
-    d.rectangle((bx, top, bx+bw, 704), fill="#16293a")
+d.ellipse((330, 540, 494, 704), fill=(217, 91, 56, 27))
+for bx, bw, top in [(316,34,558),(352,42,536),(398,34,570),(434,43,550),(478,22,580)]:
+    d.rectangle((bx, top, bx+bw, 667), fill="#16293a")
     for wx in range(bx+7, bx+bw-4, 13):
-        for wy in range(top+14, 690, 18):
+        for wy in range(top+14, 657, 18):
             if random.random() > .53:
                 d.rectangle((wx,wy,wx+4,wy+7), fill=(226,156,98,random.randint(70,170)))
-# River reflections
-d.rectangle((28, 703, 496, 755), fill="#071c2a")
-for _ in range(45):
-    x=random.randint(265,490); y=random.randint(710,752)
-    line([(x,y),(x+random.randint(5,32),y)],(111,157,166,random.randint(20,90)),1)
-# Bridge deck and battered piers
-line([(272, 660), (490, 687)], "#687987", 8)
-line([(272, 654), (490, 681)], "#aab5b6", 2)
-for bx in [316, 405, 470]:
-    line([(bx, 665), (bx-6, 723)], "#526473", 8)
-    line([(bx-17, 725), (bx+8, 725)], "#526473", 4)
-line([(375, 671), (361, 680), (373, 690), (358, 699)], "#f17b52", 4)
-# low emergency light
-d.ellipse((429, 678, 441, 690), fill="#fa815a")
-d.ellipse((426, 675, 444, 693), outline=(249,128,89,130), width=2)
-# left-side fade behind copy
-blend_left_fade(548, 756, 315, (5, 15, 26))
-text(36, 557, "UKRAINE  /  OVERNIGHT", 12, "#ff9a76", FONT_SANS)
-text(36, 579, "KYIV UNDER FIRE", 28, "#f1f3f1", FONT_COND)
-text(36, 617, "3 bridges damaged", 18, "#e1e9e9", FONT_SANS)
-text(36, 642, "At least 3 utility workers killed", 14, "#c9d7dc", FONT_REG)
-text(36, 666, "≈15 civilians injured", 15, "#c9d7dc", FONT_REG)
-text(36, 735, "Power, heat & water disrupted", 13, "#b7c8ce", FONT_REG)
+d.rectangle((28, 666, 496, 739), fill="#071c2a")
+for _ in range(33):
+    x=random.randint(302,490); y=random.randint(672,734)
+    line([(x,y),(x+random.randint(5,29),y)],(111,157,166,random.randint(20,75)),1)
+line([(310, 628), (490, 651)], "#687987", 8)
+line([(310, 622), (490, 645)], "#aab5b6", 2)
+for bx in [350, 420, 477]:
+    line([(bx, 633), (bx-6, 704)], "#526473", 8)
+    line([(bx-17, 706), (bx+8, 706)], "#526473", 4)
+line([(395, 638), (381, 647), (393, 656), (379, 665)], "#f17b52", 4)
+d.ellipse((445, 645, 457, 657), fill="#fa815a")
+d.ellipse((442, 642, 460, 660), outline=(249,128,89,130), width=2)
+blend_left_fade(506, 744, 345, (5, 15, 26))
+text(36, 507, "UKRAINE  /  OVERNIGHT", 13, "#ff9a76", FONT_SANS)
+text(36, 529, "KYIV UNDER FIRE", 32, "#f1f3f1", FONT_COND)
+text(36, 571, "3 bridges damaged", 19, "#e1e9e9", FONT_SANS)
+text(36, 605, "At least 3 utility workers killed", 18, "#c9d7dc", FONT_REG)
+text(36, 638, "≈15 civilians injured", 19, "#c9d7dc", FONT_REG)
+text(36, 711, "Power, heat & water disrupted", 19, "#d3e0e1", FONT_REG)
 
-# Asian markets: a physical-looking quote wall and a sharply falling index trace.
-for y in range(548, 760):
-    t=(y-548)/212
+# Asia's Friday close: restrained three-line grid, chart, and prominent index moves.
+for y in range(506, 744):
+    t=(y-506)/238
     d.line((528,y,996,y), fill=(20-int(7*t),24-int(5*t),34-int(6*t)))
-for x in range(818, 988, 34):
-    line([(x, 618), (x, 744)], (103,115,128,40), 1)
-for y in range(620, 744, 24):
-    line([(808,y),(988,y)],(103,115,128,40),1)
-points=[(817,625),(838,634),(859,628),(880,650),(900,644),(919,674),(939,668),(958,704),(980,715)]
-line(points, "#ef655b", 4)
+for y in (578, 608, 638):
+    line([(824,y),(989,y)], "#263642", 1)
+for x in (824, 879, 934, 989):
+    line([(x,570),(x,643)], "#202e39", 1)
+points=[(827,575),(846,581),(865,574),(884,591),(903,586),(921,610),(941,602),(960,631),(982,637)]
+line(points, "#6f9aa0", 3)
 for x,y in points:
-    d.ellipse((x-3,y-3,x+3,y+3),fill="#ffd2b4")
-# dark tint keeps the chart legible behind labels.
-d.rectangle((528,548,996,768), fill=(3,11,20,78))
-text(540, 557, "ASIA  /  AP FRIDAY CLOSE", 12, "#ff8978", FONT_SANS)
-text(540, 579, "CHIP & AI SELLOFF", 26, "#f4f4ef", FONT_COND)
-text(540, 617, "NIKKEI 225", 14, "#d4dde1", FONT_SANS)
-text(692, 611, "−5.1%", 24, "#ff8171", FONT_SANS)
-text(540, 644, "KOSPI", 14, "#d4dde1", FONT_SANS)
-text(692, 638, "−5.2%", 24, "#ff8171", FONT_SANS)
-text(540, 678, "Nikkei 56,436.65  •  Kospi 4,869.12", 12, "#dce4e4", FONT_SANS)
-text(540, 701, "Hang Seng −2.2%  •  ASX −1.6%", 12, "#b8c8ce", FONT_REG)
-text(540, 735, "Shanghai −1.3%  •  AI shares slide", 12, "#c5d2d7", FONT_REG)
+    d.ellipse((x-2,y-2,x+2,y+2),fill="#c9d9d5")
+text(540, 507, "ASIA  /  AP FRIDAY CLOSE", 13, "#ff8978", FONT_SANS)
+text(540, 529, "CHIP & AI SELLOFF", 32, "#f4f4ef", FONT_COND)
+text(540, 574, "NIKKEI 225", 19, "#d4dde1", FONT_SANS)
+text(690, 564, "−5.1%", 36, "#ff8171", FONT_SANS)
+text(540, 612, "KOSPI", 19, "#d4dde1", FONT_SANS)
+text(690, 602, "−5.2%", 36, "#ff8171", FONT_SANS)
+text(540, 651, "Nikkei 56,436.65  •  Kospi 4,869.12", 18, "#dce4e4", FONT_REG)
+text(540, 682, "Hang Seng −2.2%  •  ASX −1.6%", 19, "#b8c8ce", FONT_REG)
+text(540, 713, "Shanghai −1.3%  •  AI shares slide", 19, "#c5d2d7", FONT_REG)
 
-# COP31 gets a clear, factual supporting headline and a visual negotiation-room cue.
-panel((20, 780, 1004, 868), "#10222d", "#34515c", 12)
-d.rectangle((20, 780, 27, 868), fill="#71aaa5")
-text(42, 789, "ANTALYA  /  COP31 • SCHEDULED FINAL DAY", 12, "#a9d8d0", FONT_SANS)
-text(42, 808, "NO DEAL YET", 25, "#f3f5f0", FONT_COND)
-text(210, 814, "Fossil fuels absent from Thursday's draft; talks may run long.", 16, "#d3e0df", FONT_REG)
-# Simple lit summit-room silhouette, not a generic climate icon.
-d.rectangle((833, 840, 987, 868), fill="#183644")
-for i in range(5):
-    x=844+i*29
-    d.ellipse((x, 823, x+16, 841), fill="#b9c9b9")
-    d.rectangle((x+3, 840, x+13, 858), fill="#426775")
-d.rectangle((823, 858, 994, 863), fill="#d7a866")
+# COP31: muted teal diplomacy band with a single uncompleted agreement document.
+panel((20, 760, 1004, 842), "#10222d", "#34515c", 5)
+d.rectangle((20, 760, 27, 842), fill="#71aaa5")
+text(42, 765, "ANTALYA  /  COP31 • SCHEDULED FINAL DAY", 13, "#a9d8d0", FONT_SANS)
+text(42, 784, "NO DEAL YET", 28, "#f3f5f0", FONT_COND)
+text(226, 791, "Fossil fuels absent from Thursday's draft; talks may run long.", 19, "#d3e0df", FONT_REG)
+d.polygon([(887, 770), (960, 770), (978, 788), (978, 827), (887, 827)],
+          fill="#193946", outline="#6c9e9f")
+line([(960,770),(960,788),(978,788)], "#6c9e9f", 2)
+for y, width in [(797,61),(807,72),(817,45)]:
+    line([(899,y),(899+width,y)], "#80aaa6", 2)
+line([(900,823),(915,823),(923,814),(935,819)], "#d6dfd7", 2)
 
-# Compact but legible briefs: one line each, with estimates and expectations attributed.
-panel((20, 872, 1004, 946), "#0b1a26", "#253b47", 10)
-text(36, 879, "TOKYO", 12, "#91c5cf", FONT_SANS)
-text(36, 897, "Core CPI 2.2%", 19, "#f0f3ef", FONT_COND)
-text(36, 923, "Market expects Dec. BoJ hike", 11, "#bac9cf", FONT_REG)
-line([(260,879),(260,938)],"#2e4550",1)
-text(280, 879, "BEIJING", 12, "#91c5cf", FONT_SANS)
-text(280, 897, "LPR held for 18th month", 17, "#f0f3ef", FONT_COND)
-text(280, 923, "1-year 3.0%  /  5-year 3.5%", 11, "#bac9cf", FONT_REG)
-line([(512,879),(512,938)],"#2e4550",1)
-text(532, 879, "WELLINGTON", 12, "#91c5cf", FONT_SANS)
-text(532, 897, "Phillips makes 118", 18, "#f0f3ef", FONT_COND)
-text(532, 923, "First India treble in one year", 11, "#bac9cf", FONT_REG)
-line([(754,879),(754,938)],"#2e4550",1)
-text(773, 879, "GTA VI  /  SENSOR TOWER EST.", 11, "#91c5cf", FONT_SANS)
-text(773, 897, ">24.5m sales  •  $2.36bn", 15, "#f0f3ef", FONT_COND)
-text(773, 923, "Thursday launch; unofficial", 11, "#bac9cf", FONT_REG)
+# Four supporting briefs share one open, 106px ticker with thin dividing rules.
+d.rectangle((20, 852, 1004, 958), fill="#0b1a26")
+line([(20,852),(1004,852)],"#36505a",1)
+text(36, 861, "TOKYO", 13, "#91c5cf", FONT_SANS)
+text(36, 883, "Core CPI 2.2%", 20, "#f0f3ef", FONT_COND)
+text(36, 921, "Market expects Dec. BoJ hike", 14, "#bac9cf", FONT_REG)
+line([(260,861),(260,947)],"#2e4550",1)
+text(280, 861, "BEIJING", 13, "#91c5cf", FONT_SANS)
+text(280, 883, "LPR held for 18th month", 20, "#f0f3ef", FONT_COND)
+text(280, 921, "1-year 3.0%  /  5-year 3.5%", 14, "#bac9cf", FONT_REG)
+line([(512,861),(512,947)],"#2e4550",1)
+text(532, 861, "WELLINGTON", 13, "#91c5cf", FONT_SANS)
+text(532, 883, "Phillips makes 118", 20, "#f0f3ef", FONT_COND)
+text(532, 921, "First India treble in one year", 14, "#bac9cf", FONT_REG)
+line([(754,861),(754,947)],"#2e4550",1)
+text(773, 861, "GTA VI  /  SENSOR TOWER EST.", 12, "#91c5cf", FONT_SANS)
+text(773, 883, ">24.5m sales  •  $2.36bn", 19, "#f0f3ef", FONT_COND)
+text(773, 921, "Thursday launch; unofficial", 14, "#bac9cf", FONT_REG)
 
-# A readable date-check footer separates Thursday context from today's leads.
-d.rectangle((0, 952, W, H), fill="#e3e9e7")
-text(24, 958, "DATE CHECK", 16, "#142b35", FONT_SANS)
-text(140, 958, "NOT TODAY: APEC close • Anthropic IPO • ICJ ruling • GTA VI launch • Kerch strike.", 15, "#263e48", FONT_REG)
-text(24, 981, "Thu: Bukele registered; Iran remarks. Kerch strike earlier this week; BepiColombo due Saturday.", 15, "#263e48", FONT_REG)
-text(24, 1008, "Sources: The Hindu / IMD · Kyiv Independent · AP · CNA · Reuters · AA · ICC · BBC", 10, "#43575f", FONT_REG)
+# Cool date-check footer, spaced clear of the ticker.
+d.rectangle((0, 966, W, H), fill="#e3e9e7")
+text(24, 971, "DATE CHECK", 16, "#142b35", FONT_SANS)
+text(140, 971, "NOT TODAY: APEC close • Anthropic IPO • ICJ ruling • GTA VI launch • Kerch strike.", 15, "#263e48", FONT_REG)
+text(24, 989, "Thu: Bukele registered; Iran remarks. Kerch strike earlier this week; BepiColombo due Saturday.", 14, "#263e48", FONT_REG)
+text(24, 1007, "Sources: The Hindu / IMD · Kyiv Independent · AP · CNA · Reuters · AA · ICC · BBC", 12, "#43575f", FONT_REG)
 
 im.save("entry.png", format="PNG", optimize=True)
